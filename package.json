@@ -1,0 +1,20 @@
+{
+  "name": "torvis",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "hilbert": "^2.0.0",
+    "hilbert-2d": "^0.0.1",
+    "react": "^16.2.0",
+    "react-dom": "^16.2.0",
+    "react-scripts": "1.0.17",
+    "socket.io-client": "^2.0.4",
+    "styled-components": "^2.4.0"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test --env=jsdom",
+    "eject": "react-scripts eject"
+  }
+}
