@@ -1,7 +1,9 @@
 import React, { Component } from 'react';
 import io from 'socket.io-client';
 import h from 'hilbert-2d';
+import _ from 'lodash';
 import { injectGlobal } from 'styled-components';
+import recording from './recording.json'
 
 //import intpng from './int.png';
 
@@ -23,6 +25,10 @@ function ip2num(ip) {
     return ip.split('.').reduce(function(ipInt, octet) { return (ipInt<<8) + parseInt(octet, 10)}, 0) >>> 0;
 }
 
+const history = [];
+var lastiptime = 0;
+let recCursor = 0;
+
 class App extends Component {
   constructor(props){
     super(props);
@@ -30,33 +36,58 @@ class App extends Component {
       ips : {}
     }
   }
-  componentDidMount(){
-
-    socket.on('ips', (ips) => {
-      const allips = {...this.state.ips}
-      ips.forEach(ip => {
-        if(!this.state.ips[ip]){
-          const coords = h.decode(16, ip2num(ip)).map(v => v/65536);
-          allips[ip] = {
-            coords,
-            state : -Math.random()*300,
-            count : 1
-          }
-        }else{
-           allips[ip] = {
-            ...allips[ip],
-            count : allips[ip].count+1
-          }
+  fakeIfNeeded(){
+    var diff = (new Date()).getTime()-lastiptime;
+    if(diff > 4000){
+      this.addIps(recording[recCursor].ips)
+      recCursor = (recCursor+1)%recording.length;
+    }
+    setTimeout(() => {
+      this.fakeIfNeeded()
+    }, 100+(Math.random()*200))
+  }
+  addIps(ips){
+    const allips = {...this.state.ips}
+    //console.log(history)
+    ips.forEach(ip => {
+      if(!this.state.ips[ip]){
+        const coords = h.decode(16, ip2num(ip)).map(v => v/65536);
+        allips[ip] = {
+          coords,
+          state : -Math.random()*300,
+          count : 1
         }
-      })
-      this.setState({ips : allips})
-    });
+      }else{
+         allips[ip] = {
+          ...allips[ip],
+          count : allips[ip].count+1
+        }
+      }
+    })
+    this.setState({ips : allips})
+  }
+  componentDidMount(){
+    var start = (new Date()).getTime();
+    setTimeout(() => this.fakeIfNeeded(),2000);
+    socket.on('ips', _.throttle((ips) => {
+      if(Object.keys(this.state.ips).length > 200){
+       // console.log('no')
+        return;
+      }
+      lastiptime = (new Date()).getTime();
+      // history.push({
+      //   time : (new Date()).getTime()-start,
+      //   ips
+      // })
+      this.addIps(ips);
+    }, 200));
     const up = () => {
       const allips = {...this.state.ips}
       Object.keys(allips).forEach(ip => {
         allips[ip].state += 1;
-        if(allips[ip].state > 200){
+        if(allips[ip].state > 150){
           allips[ip].state = -Infinity;
+          delete allips[ip];
         };
       })
       this.setState({ips : allips});
@@ -92,7 +123,7 @@ class App extends Component {
             <div 
               key={ip}
               style={{
-                opacity : 1-(Math.abs((thisip.state-100))/100),
+                opacity : 1-(Math.abs((thisip.state-75))/75),
                 position:'absolute',
                 top : y-(size/2),
                 left : x-(size/2),
